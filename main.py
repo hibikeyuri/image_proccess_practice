@@ -35,11 +35,11 @@ def binarize_array(img_array, threshold):
 
 
 """OpenCV part"""
-def showIMG(img, windowName):
+def showIMG(img, windowName, duration=300):
     cv.namedWindow(windowName, cv.WINDOW_NORMAL)
     cv.resizeWindow(windowName, 800, 600)
     cv.imshow(windowName, img)
-    cv.waitKey(300)
+    cv.waitKey(duration)
     cv.destroyAllWindows()
 
 
@@ -61,23 +61,6 @@ def preprocessing_IMG(img_path, method="blur", morph="OPEN", kernel=(11, 11)):
     
 
 """
-imgray_o = cv.cvtColor(imo, cv.COLOR_BGR2GRAY)
-imgray_b = cv.cvtColor(imb, cv.COLOR_BGR2GRAY)
-
-blurred = cv.GaussianBlur(imgray_o, (11, 11), 0)
-blurred_b = cv.GaussianBlur(imgray_b, (25, 25), 0)
-
-kernel = np.ones((21, 21), dtype="uint8")
-closing_b = cv.morphologyEx(imgray_b, cv.MORPH_OPEN, kernel)
-
-edged_o = cv.Canny(blurred, 70, 210)
-edged_b = cv.Canny(blurred_b, 70, 210)
-#showIMG(edged, "edged sample")
-contours_o, hierarchy_o = cv.findContours(edged_o.copy(), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE) 
-contours_b, hierarchy_b = cv.findContours(closing_b.copy(), cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-"""
-
-"""
 for i, cnt in enumerate(cnts):
     (x, y, w, h) = cv.boundingRect(cnt)
     print("Sample #{}".format(i+1))
@@ -88,6 +71,13 @@ for i, cnt in enumerate(cnts):
     mask = mask[y:y+h, x:x+w]
     showIMG(cv.bitwise_and(sample, sample, mask=mask), "sample + mask")
 """
+
+def make_dir(dirname):
+    if os.path.isdir(dirname):
+        print("dir is exist")
+    else:
+        print("creating directory...")
+        os.mkdir(dirname)
 
 def delete_dir(dirname):
     try:
@@ -123,56 +113,101 @@ def make_gif(path, gifname, duration=100):
     
     imgs[0].save(gifname + ".gif", format='GIF', save_all=True, append_images=imgs[1:], duration=duration, loop=0)
 
+def houghcircle_processing_IMG(img_path, mask=False):
+    img = cv.imread(img_path, 0)
+    img_copy = img.copy()
+    img = cv.medianBlur(img, 5)
+    cimg = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+    circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 20, param1=250, param2=30, minRadius=70, maxRadius=100)
+    circles = np.uint16(np.around(circles))
+
+    make_dir("./gif")
+
+    for index, i in enumerate(circles[0, :]):
+        cv.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        cv.circle(cimg, (i[0], i[1]), 2, (0, 0, 255), 3)
+        print("drawing #{} circle".format(index + 1))
+        cv.imwrite("./gif/{}.jpg".format(index + 1), cimg)
+        #cv.imwrite("houghmethod.jpg", cimg)
+
+    #showIMG(cimg, "detected circles")
+    #cv.imwrite("houghmethod.jpg", cimg)
+    make_gif("./gif", "houghcirclegif")
+    delete_dir("./gif")
+
+    make_dir("./gif")
+    if mask is True:
+        for index, i in enumerate(circles[0, :]):
+            i = i.astype(int)
+            crop = img_copy[i[1] - i[2]:i[1] + i[2], i[0] - i[2]:i[0]+i[2]] #[y-r:y+r, x-r: x+r]
+            mask = np.zeros(crop.shape, dtype="uint8") # remember to set dtype = uint8!
+            mask = cv.circle(mask, (i[2], i[2]), i[2], (255, 255, 255), -1)
+            #showIMG(mask, "mask")
+            res = cv.bitwise_and(crop, crop, mask=mask)
+            cv.imwrite("./gif/{}.jpg".format(index + 1), res)
+            #showIMG(res, "masked")
+            print("masking #{} circle".format(index + 1))
+    
+    make_gif("./gif", "maskedgif")
+    delete_dir("./gif")
+
+
+def mask_IMG(img_path, position):
+    pass
+
+
+"""    
+for thres in range(180):
+    temp_img = binarize_img(img_path, thres)
+    images.append(temp_img)
+    print("Proccessing image for threshold : {}".format(thres))
+
+make_gif_PIL(images, "pillow_imagedraw")
+"""
+
+"""
+hreshold = 70
+tmp_result = binarize_img(img_path, threshold)
+tmp_result.save("result.jpg")
+
+make_dir(".gif")
+
+imo = cv.imread(img_path)
+imb = cv.imread("result.jpg")
+
+contours_o, hierarchy_o = preprocessing_IMG(img_path)
+contours_cb, hierarchy_cb = preprocessing_IMG("result.jpg", method="morph", morph="OPEN", kernel=(21, 21))
+
+sample_o = imo.copy()
+sample_cb = imb.copy()
+
+contours = contours_cb
+contour_cb_size = [cv.contourArea(contour) for contour in contours]
+contours_cb = sorted(contours, key=cv.contourArea ,reverse=False)[0:24]
+sorted_cnts = sorted(contours_cb, key=lambda cnt: cv.boundingRect(cnt)[1])
+cnts = sorted_cnts
+
+for i in range(4):
+    part_cnts = sorted(cnts[6*i: 6*i+6], key=lambda cnt: cv.boundingRect(cnt)[0])
+    for index, cnt in enumerate(part_cnts):
+        cv.drawContours(sample_cb, part_cnts, index, (0, 0, 255), 2)
+        cv.imwrite("./gif/{}.jpg".format(i*6 + (index + 1)), sample_cb)
+        print("Contour #{}".format(i*6 + (index + 1)))
+        #showIMG(sample_b, "GOGOGO")
+
+make_gif("./gif", "contour_drawing")
+delete_dir("./gif")
+    """
+
+
 if __name__ == '__main__':
 
 
     images = []
     image_file = None
+    #img_path = "img/168458087_302883851253433_4112756444715094781_n.jpg"
     img_path = "img/168677272_480702383078432_6365521997202246368_n.jpg"
-
-    """    
-    for thres in range(180):
-        temp_img = binarize_img(img_path, thres)
-        images.append(temp_img)
-        print("Proccessing image for threshold : {}".format(thres))
+    #img_path = "result.jpg"
     
-    make_gif_PIL(images, "pillow_imagedraw")
-    """
-    
-
-    threshold = 70
-    tmp_result = binarize_img(img_path, threshold)
-    tmp_result.save("result.jpg")
-
-    if os.path.isdir("./gif"):
-        print("dir is exist")
-    else:
-        print("creating directory...")
-        os.mkdir("./gif")
-
-    imo = cv.imread(img_path)
-    imb = cv.imread("result.jpg")
-
-    contours_o, hierarchy_o = preprocessing_IMG(img_path)
-    contours_cb, hierarchy_cb = preprocessing_IMG("result.jpg", method="morph", morph="OPEN", kernel=(21, 21))
-
-    sample_o = imo.copy()
-    sample_cb = imb.copy()
-
-    contours = contours_cb
-    contour_cb_size = [cv.contourArea(contour) for contour in contours]
-    contours_cb = sorted(contours, key=cv.contourArea ,reverse=False)[0:24]
-    sorted_cnts = sorted(contours_cb, key=lambda cnt: cv.boundingRect(cnt)[1])
-    cnts = sorted_cnts
-
-    for i in range(4):
-        part_cnts = sorted(cnts[6*i: 6*i+6], key=lambda cnt: cv.boundingRect(cnt)[0])
-        for index, cnt in enumerate(part_cnts):
-            cv.drawContours(sample_cb, part_cnts, index, (0, 0, 255), 2)
-            cv.imwrite("./gif/{}.jpg".format(i*6 + (index + 1)), sample_cb)
-            print("Contour #{}".format(i*6 + (index + 1)))
-            #showIMG(sample_b, "GOGOGO")
-
-    make_gif("./gif", "contour_drawing")
-    delete_dir("./gif")
-    
+    houghcircle_processing_IMG(img_path, True)
