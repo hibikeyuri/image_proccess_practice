@@ -58,21 +58,7 @@ def preprocessing_IMG(img_path, method="blur", morph="OPEN", kernel=(11, 11)):
         return contours, hierarchy
     else:
         print("Other situiation")
-    
 
-"""
-#using contour methods to mask user wanted pictures
-
-for i, cnt in enumerate(cnts):
-    (x, y, w, h) = cv.boundingRect(cnt)
-    print("Sample #{}".format(i+1))
-    sample = sample_o[y:y+h, x:x+w]
-    mask = np.zeros(imgray_b.shape[:2], dtype="uint8")
-    ((centerX, centerY), radius) = cv.minEnclosingCircle(cnt)
-    cv.circle(mask, (int(centerX), int(centerY)), int(radius), (255, 255, 255), -1)
-    mask = mask[y:y+h, x:x+w]
-    showIMG(cv.bitwise_and(sample, sample, mask=mask), "sample + mask")
-"""
 
 def make_dir(dirname):
     if os.path.isdir(dirname):
@@ -80,6 +66,7 @@ def make_dir(dirname):
     else:
         print("creating directory...")
         os.mkdir(dirname)
+
 
 def delete_dir(dirname):
     try:
@@ -94,7 +81,6 @@ def delete_dir(dirname):
     else:
         print("directory is not exit.")
     
-
 
 def make_gif(path, gifname, duration=100):
     """many images converted to GIF"""
@@ -114,6 +100,7 @@ def make_gif(path, gifname, duration=100):
         print("PermissionError")
     
     imgs[0].save(gifname + ".gif", format='GIF', save_all=True, append_images=imgs[1:], duration=duration, loop=0)
+
 
 def houghcircle_processing_IMG(img_path, mask=False):
     img = cv.imread(img_path, 0)
@@ -170,19 +157,24 @@ def preprocessing_Slicing_IMG(img_path, kernel=(1, 1), threshold=70):
 def counting_numbers(contours, eraseout=True):
     if eraseout == True:
         contours_area = [cv.contourArea(contour) for contour in contours]
+        contours_area = [x for x in contours_area if x > 0]
+        contours_area = sorted(contours_area)
         contours_area = contours_area[:-1]
         return len(contours_area)
     
 
-
 def counting_area(contours, eraseout=True):
     if eraseout == True:
         contours_area = [cv.contourArea(contour) for contour in contours]
+        contours_area = [x for x in contours_area if x > 0]
+        contours_area = sorted(contours_area)
+        contours_area = contours_area[:-1]
         area_total = sum(contours_area)
         return area_total
 
 
 def counting_area_ratio(areas, relative="bacteria_area", sample_area=None):
+    
     if relative is not "sample_area":
         ratio_area = [area / max(areas) for area in areas]
         return ratio_area
@@ -193,16 +185,6 @@ def counting_area_ratio(areas, relative="bacteria_area", sample_area=None):
 
 def main():
     pass
-
-
-"""    
-for thres in range(180):
-    temp_img = binarize_img(img_path, thres)
-    images.append(temp_img)
-    print("Proccessing image for threshold : {}".format(thres))
-
-make_gif_PIL(images, "pillow_imagedraw")
-"""
 
 
 if __name__ == '__main__':
@@ -220,42 +202,25 @@ if __name__ == '__main__':
     #hangle with each sample : counting the # of dots and areas
 
     areas = []
+    counts_cluster = []
+
     dir_path = "./gif"
     filelist = os.listdir(dir_path)
     for file in filelist:
-        filepath = path + '/' + file
+        filepath = dir_path + '/' + file
         if os.path.isfile(filepath):
-            print("Append file : {}".format(filepath))
+            #print("Append file : {}".format(filepath))
             contours, hierarchy = preprocessing_Slicing_IMG(filepath)
-            areas.ap
             counts = counting_numbers(contours)
             area = counting_area(contours)
-
-
+            counts_cluster.append(counts)
+            areas.append(area)
+            #print("Counts: {}, Area: {}".format(counts, area))
         else:
             print("{} is not a file".format(filepath))
 
+    #print("area ratio: {}".format(counting_area_ratio(areas)))
+    ratios = counting_area_ratio(areas)
 
-"""
-    sample_path = "./gif/17.jpg"
-    tmp_img = binarize_img(sample_path, 90) #讀取路徑
-    tmp_img.save("./gif/17_tmp.jpg")
-    tmp_img = cv.imread("./gif/17_tmp.jpg") #讀取路徑
-    #showIMG(tmp_img, "tmp", 1000)
-    sample = cv.imread("./gif/17_tmp.jpg")
-    sample_copy = sample.copy()
-    contours, hierarchy = preprocessing_IMG(sample_path, "blur", "open", (1, 1))
-    cv.drawContours(sample_copy, contours, -1, (0, 255, 0), 2)
-    contours_area = [cv.contourArea(contour) for contour in contours]
-    total = sum(contours_area)
-    nested_contours = [x for x in contours_area if x > 0]
-    print(sorted(nested_contours))
-    print("AREA: {}, LEN: {}".format(total, len(nested_contours)))
-    #showIMG(sample_copy, "tmp", 10000)
-"""
-
-#思路整理
-#1.讀取切片後的圖片資料夾
-#2.進行二值化
-#3.獲取contours之後對contours進行排序
-#4.如果
+    for i in range(len(counts_cluster)):
+        print("Counts: {}, Area: {}, Ratio: {}".format(counts_cluster[i], areas[i], ratios[i]))
