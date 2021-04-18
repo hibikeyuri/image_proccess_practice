@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import cv2 as cv
 import os 
+import argParse
 
 
 """PIL part"""
@@ -186,6 +187,10 @@ def counting_area_ratio(areas, relative="bacteria_area", sample_area=None):
 def main():
     pass
 
+
+def argParse():
+    arg = argParse()
+    pass
 
 if __name__ == '__main__':
 
