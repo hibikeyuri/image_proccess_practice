@@ -229,3 +229,4 @@ if __name__ == '__main__':
 
     for i in range(len(counts_cluster)):
         print("Counts: {}, Area: {}, Ratio: {}".format(counts_cluster[i], areas[i], ratios[i]))
+#我就爛
